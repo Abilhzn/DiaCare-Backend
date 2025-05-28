@@ -1,6 +1,27 @@
+# Virtual Environment
 venv/
-__pycache__/
 *.pyc
+__pycache__/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+
+# Environment variables
 .env
-instance/
+
+# SQLite database file
 *.db
+instance/
+
+# Model files (jika besar dan tidak ingin di repo, unggah terpisah)
+# app/diabetes_prediction/ml_model/*.pkl
+
+# Python build artifacts
+dist/
+build/
+*.egg-info/
