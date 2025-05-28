@@ -1,0 +1,9 @@
+Flask
+Flask-SQLAlchemy
+Flask-Migrate
+Flask-Bcrypt
+PyJWT  # Untuk token autentikasi
+scikit-learn # Untuk model ML, atau cukup joblib jika model sudah jadi
+joblib # Untuk load model .pkl
+python-dotenv # Untuk memuat variabel dari .env
+Flask-Cors # Untuk nanti kalau Streamlit beda origin
