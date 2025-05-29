@@ -2,3 +2,7 @@
 # Contoh:
 # from .user_model import User # Jika User model di sini
 # from .blood_sugar_model import BloodSugarReading
+
+# app/models/__init__.py
+# ... (impor lainnya)
+from .diabetes_prediction_result import DiabetesPredictionResult
