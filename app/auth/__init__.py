@@ -1,9 +1,8 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate # Umumnya digunakan bersama SQLAlchemy
-from flask_jwt_extended import JWTManager # Karena ada JWT_SECRET_KEY di config
-# Import konfigurasi yang telah Anda buat
-from config import config # Asumsi config.py berada di root direktori, sejajar dengan run.py
+from flask_migrate import Migrate
+from flask_jwt_extended import JWTManager
+from config import config 
 
 # Inisialisasi ekstensi tanpa aplikasi terlebih dahulu
 db = SQLAlchemy()
