@@ -1,4 +1,4 @@
-from app import db  # Asumsi Anda memiliki 'db' instance dari SQLAlchemy di __init__.py utama aplikasi
+from app import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 
