@@ -17,12 +17,11 @@ def load_model():
         print(f"ERROR: Gagal memuat model: {e}.")
         raise
 
-def predict_diabetes_service(user, data):
-    try:
-        model = load_model()
-    except Exception as e:
-        return None, f"Gagal memuat model: {e}"
 
+def predict_diabetes_service(user, data): # Sesuai SC006 [cite: 12]
+    model = load_model()
+    
+    # Validasi kelengkapan data (SC007) [cite: 12]
     required_fields = ['age', 'weight', 'blood_glucose_level', 'blood_pressure', 'family_history']
     for field in required_fields:
         if field not in data or data[field] is None:
