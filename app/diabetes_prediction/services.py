@@ -22,7 +22,6 @@ def predict_diabetes_service(user, data):
         model = load_model()
     except Exception as e:
         return None, f"Gagal memuat model: {e}"
-
     required_fields = ['age', 'weight', 'blood_glucose_level', 'blood_pressure', 'family_history']
     for field in required_fields:
         if field not in data or data[field] is None:
@@ -63,7 +62,8 @@ def predict_diabetes_service(user, data):
         db.session.commit()
 
         return {"risk_level": prediction_label, "details": "Prediksi berhasil."}, None
+    except ValueError as ve: # Untuk handle error dari dummy model jika data tidak lengkap
+        return None, str(ve)
     except Exception as e:
         current_app.logger.error(f"Error saat prediksi: {e}")
         return None, "Terjadi kesalahan saat melakukan prediksi."
-
