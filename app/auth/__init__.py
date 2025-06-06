@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate # Umumnya digunakan bersama SQLAlchemy
 from flask_jwt_extended import JWTManager # Karena ada JWT_SECRET_KEY di config
 # Import konfigurasi yang telah Anda buat
-from config import config # Asumsi config.py berada di root direktori, sejajar dengan run.py
+from .config import config # Asumsi config.py berada di root direktori, sejajar dengan run.py
 
 # Inisialisasi ekstensi tanpa aplikasi terlebih dahulu
 db = SQLAlchemy()
@@ -38,7 +38,7 @@ def create_app(config_name='default'):
     # Cek apakah direktori app/auth ada sebelum mencoba import
     # Ini untuk menghindari error jika blueprint belum dibuat
     try:
-        from .auth.routes import auth_bp
+        from auth.routes import auth_bp
         app.register_blueprint(auth_bp, url_prefix='/auth')
     except ImportError:
         # Anda bisa menambahkan logging di sini jika blueprint auth tidak ditemukan
