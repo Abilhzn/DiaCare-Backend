@@ -1,11 +1,8 @@
-# app/blood_sugar_monitoring/services.py (KODE LENGKAP YANG DIPERBAIKI)
-
 from app.models.base import db
-from app.models.blood_sugar_reading import BloodSugarReading # Pastikan model ini ada
+from app.models.blood_sugar_reading import BloodSugarReading
 from datetime import datetime
 
 # --- INI BAGIAN KUNCI INTEGRASI ---
-# Impor service dari fitur lain
 from app.recommendations.services import get_recommendations_for_reading # Asumsi nama fungsinya ini
 from app.notifications.services import create_sugar_alert_notification # Asumsi nama fungsinya ini
 
