@@ -1,3 +1,5 @@
+# app/blood_sugar_monitoring/services.py (KODE LENGKAP YANG DIPERBAIKI)
+
 from app.models.base import db
 from app.models.blood_sugar_reading import BloodSugarReading # Pastikan model ini ada
 from datetime import datetime

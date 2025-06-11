@@ -2,7 +2,7 @@ from flask import request, jsonify
 from . import blood_sugar_bp
 from .services import (
     add_blood_sugar_service,
-    get_user_readings_service,
+    get_user_readings_service, # Nama fungsi diubah agar lebih jelas
     get_reading_by_id_service,
     update_reading_service,
     delete_reading_service

@@ -1,5 +1,3 @@
-# app/models/blood_sugar_reading.py
-
 from .base import db
 from datetime import datetime
 
