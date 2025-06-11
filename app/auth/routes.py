@@ -1,5 +1,4 @@
-from . import auth_bp
-from app.auth.services import register_user, login_user
+from app.auth.services import create_user, login_user
 from app.core.utils import encode_auth_token
 from flask import Blueprint, request, jsonify
 from app.auth import services
@@ -50,7 +49,7 @@ def login():
     
     return jsonify({"message": "Login successful", "user_id": user.id}), 200 
 
-def register_user(username, email, password, full_name):
+def create_user(username, email, password, full_name):
     """
     Mendaftarkan user baru, lengkap dengan profil awal.
     """

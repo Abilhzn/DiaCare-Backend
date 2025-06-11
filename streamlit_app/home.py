@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-BACKEND_URL = "http://127.0.0.1:5000/api"
+BACKEND_URL = "http://127.0.0.1:5000/api/auth/register" 
 
 # Inisialisasi session state jika belum ada
 if 'auth_token' not in st.session_state:
