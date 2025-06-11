@@ -6,7 +6,7 @@ class Config:
     """
     Konfigurasi dasar yang akan diwarisi oleh konfigurasi lainnya.
     """
-    # Kunci rahasia untuk keamanan sesi dan CSRF.   
+    # Kunci rahasia untuk keamanan sesi dan CSRF.
     SECRET_KEY = os.environ.get('joelsiboedaksby') or 'joelsiboedaksby'
 
     # Menonaktifkan fitur modifikasi dari SQLAlchemy yang tidak diperlukan dan deprecated.
