@@ -1,28 +1,52 @@
 import os
 
-class config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'your_default_secret_key'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///dia_care.db'
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+class Config:
+    """
+    Konfigurasi dasar yang akan diwarisi oleh konfigurasi lainnya.
+    """
+    # Kunci rahasia untuk keamanan sesi dan CSRF.
+    SECRET_KEY = os.environ.get('joelsiboedaksby') or 'joelsiboedaksby'
+
+    # Menonaktifkan fitur modifikasi dari SQLAlchemy yang tidak diperlukan dan deprecated.
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'your_default_jwt_secret_key'
+
+    # Kunci rahasia untuk JSON Web Tokens (JWT).
+    JWT_SECRET_KEY = os.environ.get('benjowel') or 'benjowel'
+
+    MODEL_PATH = os.path.join(basedir, 'app', 'diabetes_prediction', 'ml_model', 'diabetes_model.pkl')
 
     @staticmethod
     def init_app(app):
-        pass  # Bisa diisi konfigurasi tambahan jika diperlukan
+        pass
 
-class DevelopmentConfig(config):
+class DevelopmentConfig(Config):
+    # Mengaktifkan mode debug Flask untuk hot-reloading dan debugger interaktif.
     DEBUG = True
 
-class ProductionConfig(config):
-    DEBUG = False
+    # URI untuk database pengembangan.
+    # Menggunakan SQLite agar mudah untuk memulai.
+    # File database (diacare_dev.db) akan dibuat di direktori root proyek.
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI') or \
+        'sqlite:///' + os.path.join(basedir, 'diacare_dev.db')
 
-class TestingConfig(config):
+class TestingConfig(Config):
+    # Mengaktifkan mode testing Flask.
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+
+    # Menonaktifkan CSRF protection dalam form saat testing.
+    WTF_CSRF_ENABLED = False
+
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI') or 'sqlite:///:memory:'
+
+class ProductionConfig(Config):
+    SQLALCHEMY_DATABASE_URI = os.environ.get('SQLALCHEMY_DATABASE_URI') or \
+        'sqlite:///' + os.path.join(basedir, 'diacare.db')
 
 config = {
     'development': DevelopmentConfig,
-    'production': ProductionConfig,
     'testing': TestingConfig,
+    'production': ProductionConfig,
     'default': DevelopmentConfig
 }
