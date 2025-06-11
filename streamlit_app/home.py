@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-BACKEND_URL = "http://127.0.0.1:5000/api/auth/register" 
+BACKEND_URL = "http://127.0.0.1:5000/api" 
 
 # Inisialisasi session state jika belum ada
 if 'auth_token' not in st.session_state:
@@ -93,8 +93,7 @@ else:
                             "username": username_reg,
                             "email": email_reg,
                             "password": password_reg,
-                            # Tambahkan data awal untuk profil jika backend mendukung
-                            "full_name": fullname_reg 
+                            "full_name": fullname_reg
                         }
                         response = requests.post(f"{BACKEND_URL}/auth/register", json=payload)
 
