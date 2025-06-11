@@ -21,7 +21,10 @@ def is_valid_password(password):
         return False
     return True
 
-def create_user(username, email, password):
+def create_user(username, email, password, full_name):
+    if User.query.filter((User.username == username) | (User.email == email)).first():
+        return False, {"status": "error", "message": "Username atau Email sudah ada yang menggunakan."}
+    
     """Membuat user baru."""
     if User.query.filter_by(username=username).first():
         return None, "Username already exists", 409 # Conflict
@@ -36,14 +39,19 @@ def create_user(username, email, password):
 
     new_user = User(username=username, email=email)
     new_user.set_password(password)
+    new_profile = Profile(full_name=full_name)
+    new_user.profile = new_profile
     
     try:
         db.session.add(new_user)
         db.session.commit()
-        return new_user, "User created successfully", 201 # Created
+
+        auth_token = encode_auth_token(new_user.id)
+        response = {"status": "success", "message": "Registrasi berhasil!", "auth_token": auth_token}
+        return True, response, 201 # Created
     except Exception as e:
         db.session.rollback()
-        return None, f"Failed to create user: {str(e)}", 500 # Internal Server Error
+        return False, {"status": "error", "message": f"Terjadi kesalahan internal: {str(e)}"}
 
 def authenticate_user(username, password):
     """Mengautentikasi user."""
@@ -145,10 +153,10 @@ def login_user(email, password):
                     'profile': user.profile.to_dict() if user.profile else None 
                 }
             }
-            return response_data
+            return True, response_data
             
         else:
-            return None # Kembalikan None jika login gagal
+            return False, {"status": "error", "message": "Email atau password salah."}
 
     except Exception as e:
         # Sebaiknya log error di sini

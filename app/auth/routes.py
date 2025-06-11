@@ -1,4 +1,4 @@
-from app.auth.services import create_user, login_user
+from app.auth.services import register_user, login_user
 from app.core.utils import encode_auth_token
 from flask import Blueprint, request, jsonify
 from app.auth import services
@@ -10,46 +10,49 @@ from app.models.base import db
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-@auth_bp.route('/signup', methods=['POST'])
-def signup():
+@auth_bp.route('/register', methods=['POST'])
+def register():
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Request body must be JSON"}), 400
+        return jsonify({"message": "Request body harus dalam format JSON."}), 400
 
     username = data.get('username')
     email = data.get('email')
     password = data.get('password')
+    full_name = data.get('full_name')
 
-    # Validasi input dasar bisa ditambahkan di sini
-    if not all([username, email, password]):
-        return jsonify({"error": "Missing username, email, or password"}), 400
+    if not all([username, email, password, full_name]):
+        return jsonify({"message": "Username, email, password, dan nama lengkap wajib diisi."}), 400
 
-    user, error_message, status_code = services.create_user(username, email, password)
-    if error_message:
-        return jsonify({"error": error_message}), status_code
-    
-    return jsonify({"message": "User created successfully. Please complete your profile.", "user_id": user.id}), status_code
+    success, response_data = register_user(username, email, password, full_name)
+
+    if success:
+        return jsonify(response_data), 201
+    else:
+        status_code = 409 if 'sudah ada' in response_data.get('message', '').lower() else 400
+        return jsonify(response_data), status_code
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
     if not data:
-        return jsonify({"error": "Request body must be JSON"}), 400
+        return jsonify({"message": "Request body harus dalam format JSON."}), 400
 
-    username = data.get('username')
+    email = data.get('email')
     password = data.get('password')
 
-    if not all([username, password]):
-        return jsonify({"error": "Missing username or password"}), 400
-
-    user, error_message, status_code = services.authenticate_user(username, password)
-    if error_message:
-        return jsonify({"error": error_message}), status_code
-
+    if not all([email, password]):
+        return jsonify({"message": "Email dan password wajib diisi."}), 400
     
-    return jsonify({"message": "Login successful", "user_id": user.id}), 200 
+    # Panggil service login
+    success, response_data = login_user(email, password)
 
-@auth_bp.route('/register', methods=['POST'])
+    if success:
+        return jsonify(response_data), 200
+    else:
+        return jsonify(response_data), 401 # Unauthorized
+
+# @auth_bp.route('/register', methods=['POST'])
 def create_user(username, email, password, full_name):
     """
     Mendaftarkan user baru, lengkap dengan profil awal.
