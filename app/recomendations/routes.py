@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.recommendations.services import get_recommendation_service
+from services import get_recommendation_service
 
 recommendations_bp = Blueprint('recommendations', __name__)
 
