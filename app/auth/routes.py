@@ -17,7 +17,7 @@ def signup():
     email = data.get('email')
     password = data.get('password')
 
-    # Validasi input dasar bisa ditambahkan di sini atau di services
+    # Validasi input dasar bisa ditambahkan di sini
     if not all([username, email, password]):
         return jsonify({"error": "Missing username, email, or password"}), 400
 
@@ -25,8 +25,6 @@ def signup():
     if error_message:
         return jsonify({"error": error_message}), status_code
     
-    # Setelah sign up, Anda bisa langsung meminta data profil atau membuat endpoint terpisah
-    # Di sini, kita asumsikan user akan mengisi profil setelah login atau di langkah berikutnya
     return jsonify({"message": "User created successfully. Please complete your profile.", "user_id": user.id}), status_code
 
 @auth_bp.route('/login', methods=['POST'])
@@ -45,27 +43,14 @@ def login():
     if error_message:
         return jsonify({"error": error_message}), status_code
 
-    # Jika menggunakan Flask-Login:
-    # login_user(user)
     
-    # Jika menggunakan Flask-JWT-Extended:
-    # access_token = create_access_token(identity=user.id)
-    # return jsonify(access_token=access_token, message="Login successful"), 200
-    
-    return jsonify({"message": "Login successful", "user_id": user.id}), 200 # Sesuaikan respons sesuai kebutuhan
-
+    return jsonify({"message": "Login successful", "user_id": user.id}), 200 
 @auth_bp.route('/profile', methods=['POST', 'GET', 'PUT'])
 # @login_required # Jika menggunakan Flask-Login
 # @jwt_required() # Jika menggunakan Flask-JWT-Extended
 def profile_management():
-    # user_id = current_user.id # Jika menggunakan Flask-Login
-    # user_id = get_jwt_identity() # Jika menggunakan Flask-JWT-Extended
-    
-    # Untuk sementara, kita akan mengambil user_id dari request header atau body
-    # Ini HANYA untuk contoh, idealnya gunakan sistem autentikasi yang proper
     user_id = request.headers.get('X-User-Id') # Contoh, atau ambil dari token JWT
     if not user_id:
-        # Coba ambil dari body jika POST atau PUT dan tidak di header
         if request.method in ['POST', 'PUT']:
             data = request.get_json()
             user_id = data.get('user_id') if data else None
