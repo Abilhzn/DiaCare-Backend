@@ -29,7 +29,7 @@ def create_app(config_name='default'):
     jwt.init_app(app) # Inisialisasi Flask-JWT-Extended
 
     try:
-        from .auth.routes import auth_bp
+        from auth.routes import auth_bp
         app.register_blueprint(auth_bp, url_prefix='/auth')
     except ImportError:
         pass 
