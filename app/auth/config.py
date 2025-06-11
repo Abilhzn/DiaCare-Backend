@@ -6,14 +6,14 @@ class Config:
     """
     Konfigurasi dasar yang akan diwarisi oleh konfigurasi lainnya.
     """
-    # Kunci rahasia untuk keamanan sesi dan CSRF.
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'kunci-rahasia-yang-sangat-sulit-ditebak'
+    # Kunci rahasia untuk keamanan sesi dan CSRF.   
+    SECRET_KEY = os.environ.get('joelsiboedaksby') or 'joelsiboedaksby'
 
     # Menonaktifkan fitur modifikasi dari SQLAlchemy yang tidak diperlukan dan deprecated.
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Kunci rahasia untuk JSON Web Tokens (JWT).
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'kunci-jwt-super-rahasia'
+    JWT_SECRET_KEY = os.environ.get('benjowel') or 'benjowel'
 
     MODEL_PATH = os.path.join(basedir, 'app', 'diabetes_prediction', 'ml_model', 'diabetes_model.pkl')
 
