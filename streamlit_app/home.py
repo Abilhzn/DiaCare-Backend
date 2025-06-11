@@ -54,6 +54,25 @@ else:
                         st.session_state.auth_token = data.get("auth_token")
                         st.session_state.user_name = data.get("user", {}).get("name")
                         st.rerun()
+
+                        # --- LOGIKA BARU DI SINI ---
+                        user_status = data.get("user_status")
+                        
+                        if user_status == "new_user_profile_incomplete":
+                            st.success("Login berhasil! Selamat datang di DiaCare.")
+                            st.warning("Profil kesehatan Anda belum lengkap. Silakan lengkapi profil Anda terlebih dahulu untuk menggunakan semua fitur.")
+                            # Di aplikasi multi-halaman, kamu bisa mengarahkan mereka ke halaman profil
+                            # st.switch_page("pages/4_Profil_Saya.py") # Contoh jika pakai fitur switch_page Streamlit terbaru
+                        else:
+                            st.success("Login berhasil! Selamat datang kembali.")
+                        
+                        # Simpan data profil ke session state jika perlu
+                        st.session_state.profile = data.get("user", {}).get("profile")
+                        
+                        # Tunggu sesaat lalu muat ulang halaman untuk menampilkan menu utama
+                        import time
+                        time.sleep(2)
+                        st.rerun()
                     else:
                         st.error(f"Gagal login: {response.json().get('message', 'Error tidak diketahui')}")
                 except requests.exceptions.ConnectionError:

@@ -2,7 +2,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
-from config import config 
+from app.core.config import config 
 
 # Inisialisasi ekstensi tanpa aplikasi terlebih dahulu
 db = SQLAlchemy()
