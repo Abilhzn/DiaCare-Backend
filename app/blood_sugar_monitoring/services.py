@@ -1,13 +1,10 @@
-# app/blood_sugar_monitoring/services.py (KODE LENGKAP YANG DIPERBAIKI)
-
 from app.models.base import db
-from app.models.blood_sugar_reading import BloodSugarReading # Pastikan model ini ada
+from app.models.blood_sugar_reading import BloodSugarReading
 from datetime import datetime
 
 # --- INI BAGIAN KUNCI INTEGRASI ---
-# Impor service dari fitur lain
-from app.recommendations.services import get_recommendations_for_reading # Asumsi nama fungsinya ini
-from app.notifications.services import create_sugar_alert_notification # Asumsi nama fungsinya ini
+from app.recommendations.services import get_recommendation_service
+from app.notifications.services import generate_notification
 
 # --- FUNGSI CREATE YANG SUDAH TERINTEGRASI ---
 def add_blood_sugar_service(user, data):
@@ -37,7 +34,7 @@ def add_blood_sugar_service(user, data):
 
     # --- PANGGIL FITUR LAIN SETELAH DATA DISIMPAN ---
     # 1. Panggil service Rekomendasi
-    recommendation_text = get_recommendations_for_reading(
+    recommendation_text = get_recommendation_service(
         sugar_level_value=new_reading.value, 
         user_age=user.profile.age, # Ambil data profil user
         user_category=user.profile.precondition, # misal: 'sehat', 'pradiabetes'
@@ -45,7 +42,7 @@ def add_blood_sugar_service(user, data):
     )
     
     # 2. Panggil service Notifikasi
-    notification_message = create_sugar_alert_notification(user, new_reading.value)
+    notification_message = generate_notification(user, new_reading.value)
 
     # 3. Siapkan response yang kaya akan informasi
     response_data = {

@@ -1,10 +1,10 @@
 import os
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'you-will-never-guess'
+    SECRET_KEY = os.environ.get('joelsiboedaksby') or 'joelsiboedaksby'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or 'super-secret-jwt'
-    # Model ML
+    JWT_SECRET_KEY = os.environ.get('benjowel') or 'benjowel'
+    # Untuk model ML
     MODEL_PATH = os.path.join(os.path.dirname(__file__), '..', 'diabetes_prediction', 'ml_model', 'diabetes_model.pkl')
 
 

@@ -1,4 +1,4 @@
-from app.auth.services import register_user, login_user
+from app.auth.services import create_user, login_user
 from app.core.utils import encode_auth_token
 from flask import Blueprint, request, jsonify
 from app.auth import services

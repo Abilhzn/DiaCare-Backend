@@ -1,9 +1,27 @@
+# requirements.txt
+
+# Framework utama backend
 Flask
+Flask-Cors
+
+# Database
 Flask-SQLAlchemy
 Flask-Migrate
+
+# Otentikasi & Keamanan
 Flask-Bcrypt
-PyJWT  # Untuk token autentikasi
-scikit-learn # Untuk model ML, atau cukup joblib jika model sudah jadi
-joblib # Untuk load model .pkl
-python-dotenv # Untuk memuat variabel dari .env
-Flask-Cors # Untuk nanti kalau Streamlit beda origin
+Flask-JWT-Extended
+PyJWT
+
+# Konfigurasi & Lingkungan
+python-dotenv
+
+# Machine Learning & Data
+scikit-learn
+joblib
+pandas
+numpy
+
+# Frontend & Komunikasi API
+streamlit
+requests
