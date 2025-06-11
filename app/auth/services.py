@@ -112,3 +112,42 @@ def get_user_profile(user_id):
     
     # Informasi umur akan dihitung secara otomatis oleh property 'age' di model Profile
     return user.profile, "Profile retrieved successfully", 200
+
+def login_user(email, password):
+    """
+    Melakukan login user dan mengecek status kelengkapan profil.
+    """
+    try:
+        user = User.query.filter_by(email=email).first()
+        if user and user.check_password(password):
+            # Login berhasil, sekarang cek profilnya
+            
+            user_status = "existing_user" # Asumsi default pengguna lama
+            
+            # Cek apakah profil sudah lengkap menggunakan property yang kita buat
+            if user.profile and not user.profile.is_complete:
+                user_status = "new_user_profile_incomplete"
+            
+            auth_token = generate_token(user.id) # Asumsi nama fungsinya generate_token
+            
+            response_data = {
+                'status': 'success',
+                'message': 'Login berhasil.',
+                'auth_token': auth_token,
+                'user_status': user_status, # <-- KIRIM STATUS INI KE FRONTEND
+                'user': {
+                    'id': user.id,
+                    'username': user.username,
+                    'email': user.email,
+                    # Kirim juga data profil jika ada
+                    'profile': user.profile.to_dict() if user.profile else None 
+                }
+            }
+            return response_data
+            
+        else:
+            return None # Kembalikan None jika login gagal
+
+    except Exception as e:
+        # Sebaiknya log error di sini
+        return None

@@ -37,6 +37,17 @@ class Profile(db.Model):
             return None
         today = date.today()
         return today.year - self.date_of_birth.year - ((today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day))
+    
+    def is_complete(self):
+        """
+        Property untuk mengecek apakah profil sudah diisi dengan data esensial.
+        Mengembalikan True jika sudah lengkap, False jika belum.
+        """
+        # Tentukan kolom apa saja yang wajib diisi untuk dianggap "lengkap"
+        # Di sini kita asumsikan nama, tanggal lahir, tinggi, dan berat wajib ada.
+        if self.full_name and self.date_of_birth and self.height and self.weight:
+            return True
+        return False
 
     def __repr__(self):
         return f'<Profile {self.full_name}>'
