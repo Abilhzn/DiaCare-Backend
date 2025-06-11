@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import json
+import time
 
 # --- KONFIGURASI & FUNGSI BANTUAN ---
 st.set_page_config(
@@ -19,61 +20,88 @@ if 'user_name' not in st.session_state:
 
 # --- TAMPILAN UTAMA ---
 
-# Jika sudah login, tampilkan pesan selamat datang dan tombol logout di sidebar
+# Jika SUDAH login, tampilkan halaman sambutan dan menu
 if st.session_state.auth_token:
     with st.sidebar:
         st.subheader(f"Selamat Datang,")
         st.markdown(f"**{st.session_state.user_name}**!")
         st.divider()
-        if st.button("Keluar", use_container_width=True):
+        if st.button("Keluar", use_container_width=True, type="primary"):
             st.session_state.auth_token = None
             st.session_state.user_name = None
             st.rerun()
     
-    st.title("Selamat Datang di DiaCare! 🩺")
+    st.title("Selamat Datang Kembali di DiaCare! 🩺")
     st.markdown("Gunakan menu di samping untuk menavigasi fitur-fitur yang tersedia.")
     st.info("Anda sudah masuk. Silakan pilih halaman dari sidebar di sebelah kiri.", icon="👈")
 
-# Jika belum login, tampilkan form login
+# Jika BELUM login, tampilkan pilihan Login atau Registrasi
 else:
     st.title("Selamat Datang di DiaCare! 🩺")
-    st.header("Silakan Masuk untuk Melanjutkan")
     
-    with st.form("login_form"):
-        email = st.text_input("Email")
-        password = st.text_input("Password", type="password")
-        
-        if st.form_submit_button("Masuk"):
-            if not email or not password:
-                st.error("Email dan Password tidak boleh kosong.")
-            else:
-                try:
-                    response = requests.post(f"{BACKEND_URL}/auth/login", json={"email": email, "password": password})
-                    if response.status_code == 200:
-                        data = response.json()
-                        st.session_state.auth_token = data.get("auth_token")
-                        st.session_state.user_name = data.get("user", {}).get("name")
-                        st.rerun()
+    # --- Membuat Dua Tab: Satu untuk Login, Satu untuk Registrasi ---
+    login_tab, register_tab = st.tabs(["Masuk (Login)", "Daftar Akun Baru (Registrasi)"])
 
-                        # --- LOGIKA BARU DI SINI ---
-                        user_status = data.get("user_status")
+    # --- KONTEN TAB LOGIN ---
+    with login_tab:
+        st.subheader("Silakan Masuk ke Akun Anda")
+        with st.form("login_form"):
+            email_login = st.text_input("Email", key="login_email")
+            password_login = st.text_input("Password", type="password", key="login_password")
+            
+            if st.form_submit_button("Masuk", use_container_width=True, type="primary"):
+                if not email_login or not password_login:
+                    st.error("Email dan Password tidak boleh kosong.")
+                else:
+                    try:
+                        payload = {"email": email_login, "password": password_login}
+                        response = requests.post(f"{BACKEND_URL}/auth/login", json=payload)
                         
-                        if user_status == "new_user_profile_incomplete":
-                            st.success("Login berhasil! Selamat datang di DiaCare.")
-                            st.warning("Profil kesehatan Anda belum lengkap. Silakan lengkapi profil Anda terlebih dahulu untuk menggunakan semua fitur.")
-                            # Di aplikasi multi-halaman, kamu bisa mengarahkan mereka ke halaman profil
-                            # st.switch_page("pages/4_Profil_Saya.py") # Contoh jika pakai fitur switch_page Streamlit terbaru
+                        if response.status_code == 200:
+                            data = response.json()
+                            st.session_state.auth_token = data.get("auth_token")
+                            # Ambil nama dari profil jika ada, jika tidak dari username
+                            profile_data = data.get("user", {}).get("profile", {})
+                            st.session_state.user_name = profile_data.get("full_name") if profile_data and profile_data.get("full_name") else data.get("user", {}).get("username")
+                            
+                            st.rerun() # Muat ulang halaman untuk masuk ke state "sudah login"
                         else:
-                            st.success("Login berhasil! Selamat datang kembali.")
-                        
-                        # Simpan data profil ke session state jika perlu
-                        st.session_state.profile = data.get("user", {}).get("profile")
-                        
-                        # Tunggu sesaat lalu muat ulang halaman untuk menampilkan menu utama
-                        import time
-                        time.sleep(2)
-                        st.rerun()
-                    else:
-                        st.error(f"Gagal login: {response.json().get('message', 'Error tidak diketahui')}")
-                except requests.exceptions.ConnectionError:
-                    st.error("Gagal terhubung ke server backend. Pastikan server sudah berjalan.")
+                            st.error(f"Gagal login: {response.json().get('message', 'Error tidak diketahui')}")
+                    except requests.exceptions.ConnectionError:
+                        st.error("Gagal terhubung ke server backend. Pastikan server sudah berjalan.")
+
+    # --- KONTEN TAB REGISTRASI ---
+    with register_tab:
+        st.subheader("Buat Akun Baru Anda")
+        with st.form("register_form"):
+            username_reg = st.text_input("Username (untuk login, tanpa spasi)", key="reg_username")
+            fullname_reg = st.text_input("Nama Lengkap", key="reg_fullname")
+            email_reg = st.text_input("Email", key="reg_email")
+            password_reg = st.text_input("Password", type="password", key="reg_password")
+            confirm_password_reg = st.text_input("Konfirmasi Password", type="password", key="reg_confirm_password")
+
+            if st.form_submit_button("Daftar", use_container_width=True):
+                # Validasi di sisi frontend
+                if not all([username_reg, fullname_reg, email_reg, password_reg, confirm_password_reg]):
+                    st.error("Semua field wajib diisi.")
+                elif password_reg != confirm_password_reg:
+                    st.error("Password dan konfirmasi password tidak cocok.")
+                else:
+                    try:
+                        # Kirim request ke endpoint registrasi di backend
+                        payload = {
+                            "username": username_reg,
+                            "email": email_reg,
+                            "password": password_reg,
+                            # Tambahkan data awal untuk profil jika backend mendukung
+                            "full_name": fullname_reg 
+                        }
+                        response = requests.post(f"{BACKEND_URL}/auth/register", json=payload)
+
+                        if response.status_code == 201: # 201 Created
+                            st.success("Registrasi berhasil! Anda akan diarahkan ke tab Login untuk masuk.")
+                            st.info("Silakan pindah ke tab 'Masuk (Login)' dan masuk dengan email dan password yang baru saja Anda daftarkan.")
+                        else:
+                            st.error(f"Gagal mendaftar: {response.json().get('message', 'Error tidak diketahui')}")
+                    except requests.exceptions.ConnectionError:
+                        st.error("Gagal terhubung ke server backend.")
