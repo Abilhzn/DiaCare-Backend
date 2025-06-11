@@ -1,7 +1,9 @@
 import re
 from datetime import datetime
-from app import db
+# from app import db
 from app.auth.models import User, Profile
+from app.models.base import db
+from app.core.utils import encode_auth_token
 
 # Validasi Email
 def is_valid_gmail(email):
@@ -128,7 +130,7 @@ def login_user(email, password):
             if user.profile and not user.profile.is_complete:
                 user_status = "new_user_profile_incomplete"
             
-            auth_token = generate_token(user.id) # Asumsi nama fungsinya generate_token
+            auth_token = encode_auth_token(user.id)
             
             response_data = {
                 'status': 'success',
