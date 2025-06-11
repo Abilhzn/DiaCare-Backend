@@ -1,18 +1,7 @@
 from app.recomendations.services import get_recommendation_service
 
 def generate_notification(age: int, glucose: int, condition: str, category: str) -> dict:
-    """
-    Menghasilkan notifikasi berdasarkan rekomendasi glukosa.
-
-    Args:
-        age (int): Usia pengguna.
-        glucose (int): Kadar gula.
-        condition (str): sebelum/sesudah makan.
-        category (str): sehat/pradiabetes/diabetes
-
-    Returns:
-        dict: Hasil notifikasi dengan status dan pesan.
-    """
+    
     recommendation_result = get_recommendation_service(age, glucose, condition, category)
 
     status = recommendation_result.get("status")

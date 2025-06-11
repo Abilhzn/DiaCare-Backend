@@ -12,4 +12,5 @@ def create_app():
     from app.notifications.routes import notifications_bp
     app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
 
+
     return app
