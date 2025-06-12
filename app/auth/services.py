@@ -36,9 +36,9 @@ def register_user(username, email, password, full_name):
         # Buat objek User baru
         new_user = User(
             username=username,
-            email=email,
-            password=password # Password akan di-hash di dalam model User
+            email=email
         )
+        new_user.set_password(password)
 
         # Buat objek Profile baru dan isi dengan nama lengkap
         new_profile = Profile(full_name=full_name)
