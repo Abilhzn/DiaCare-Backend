@@ -9,7 +9,7 @@ def send_notification():
     Endpoint untuk mengirim notifikasi berdasarkan hasil rekomendasi.
     Menerima data JSON:
     {
-        "age": int
+        "age": int,
         "glucose": int,
         "condition": "sebelum" | "sesudah",
         "category": "sehat" | "pradiabetes" | "diabetes"
