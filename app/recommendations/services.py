@@ -1,5 +1,3 @@
-# app/recommendations/services.py (Revisi V.2)
-
 from datetime import date
 
 def get_recommendation_service(age: int, glucose: int, condition: str, category: str) -> dict:

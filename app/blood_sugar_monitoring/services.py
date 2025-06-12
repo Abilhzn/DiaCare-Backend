@@ -1,44 +1,130 @@
-# services.py
-import datetime
+from app.models.base import db
+from app.models.blood_sugar_reading import BloodSugarReading
+from datetime import datetime
+from app.models.notification import Notification
 
-# =============================
-# 📦 Data Storage (simulasi database)
-# =============================
-riwayat_gula_darah = []
+# --- INI BAGIAN KUNCI INTEGRASI ---
+from app.recommendations.services import get_recommendation_service
+from app.notifications.services import generate_notification
 
-def catat_data(nilai):
-    """Mencatat data gula darah ke dalam riwayat."""
-    waktu = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    riwayat_gula_darah.append({"waktu": waktu, "nilai": nilai})
-    return True # Indikasi sukses
-
-def dapatkan_riwayat():
-    """Mengembalikan seluruh riwayat gula darah."""
-    return riwayat_gula_darah
-
-def ubah_data(indeks, nilai_baru):
-    """Mengubah nilai data gula darah pada indeks tertentu."""
-    if indeks < 0 or indeks >= len(riwayat_gula_darah):
-        raise IndexError("Nomor data tidak valid.")
-    riwayat_gula_darah[indeks]['nilai'] = nilai_baru
-    return True # Indikasi sukses
-
-# =============================
-# 🧪 Validasi Input
-# =============================
-def validasi_input_gula_darah(input_str):
+# --- FUNGSI CREATE YANG SUDAH TERINTEGRASI ---
+def add_blood_sugar_service(user, data):
     """
-    Melakukan validasi terhadap input kadar gula darah.
-    Akan melempar ValueError jika input tidak valid.
+    Menambahkan data pembacaan gula darah baru, mendapatkan rekomendasi,
+    dan menyimpan rekomendasi tersebut sebagai notifikasi.
     """
-    if input_str == "":
-        raise ValueError("Input tidak boleh kosong.")
+
+    if not user:
+        return False, {"message": "User tidak ditemukan."}, 404
+
+    value = data.get('value')
+    notes = data.get('notes')
+    condition = data.get('condition')
+
+    if value is None or not condition:
+        return False, "Nilai gula darah tidak boleh kosong."
+    
     try:
-        nilai = float(input_str)
-    except ValueError:
-        raise ValueError("Input harus berupa angka.")
+        float_value = float(value)
+    except (ValueError, TypeError):
+        return False, "Nilai gula darah harus berupa angka."
+    try:
+        # Buat entri baru dan kaitkan dengan user.id
+        new_reading = BloodSugarReading(
+            user_id=user.id,
+            value=float(value),
+            condition=condition,
+            notes=notes,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(new_reading)
+        db.session.commit()
+
+        # --- PANGGIL FITUR LAIN SETELAH DATA DISIMPAN ---
+        # 1. Panggil service Rekomendasi
+        recommendation_text = get_recommendation_service(
+            value=new_reading.value, # Menggunakan 'value'
+            meal_condition=new_reading.condition # Menggunakan 'meal_condition' sesuai definisi fungsi di bawah
+        )
+        # recommendation_text = get_recommendation_service(
+        #     value=new_reading.value, 
+        #     user_age=user.profile.age, # Ambil data profil user
+        #     user_category=user.profile.precondition, # misal: 'sehat', 'pradiabetes'
+        #     meal_condition=new_reading.condition
+        # )
+        
+        if recommendation_text:
+            # Buat objek Notifikasi baru dari teks rekomendasi
+            new_notification = Notification(
+                user_id=user.id,
+                message=f"Rekomendasi: {recommendation_text}"
+            )
+            db.session.add(new_notification)
+            db.session.commit()
+
+        # 2. Panggil service Notifikasi
+        notification_message = generate_notification(user, new_reading.value)
+
+        # 3. Siapkan response yang kaya akan informasi
+        response_data = {
+            "message": "Data gula darah berhasil disimpan.",
+            "reading": new_reading.to_dict(), # Asumsi ada method to_dict() di model
+            "recommendation": recommendation_text,
+            # "notification": notification_message
+        }
+        return True, response_data
     
-    if nilai < 20 or nilai > 600:
-        raise ValueError("Nilai gula darah tidak wajar, periksa kembali inputan anda.")
+    except Exception as e:
+        db.session.rollback()
+        return False, {"message": f"An unexpected error occurred: {str(e)}"}, 500
+
+# --- FUNGSI READ DENGAN FILTER USER ---
+def get_all_readings_service(user):
+    """
+    Mengambil semua riwayat pembacaan gula darah untuk seorang user.
+    """
+    if not user:
+        return None
     
-    return nilai
+    readings = BloodSugarReading.query.filter_by(user_id=user.id).order_by(BloodSugarReading.timestamp.desc()).all()
+    return [reading.to_dict() for reading in readings]
+
+def get_user_readings_service(user):
+    # .query.filter_by(user_id=user.id) adalah kuncinya!
+    readings = BloodSugarReading.query.filter_by(user_id=user.id).order_by(BloodSugarReading.timestamp.desc()).all()
+    return [r.to_dict() for r in readings]
+
+def get_reading_by_id_service(user, reading_id):
+    # Filter berdasarkan ID DAN user_id untuk keamanan
+    reading = BloodSugarReading.query.filter_by(id=reading_id, user_id=user.id).first()
+    return reading.to_dict() if reading else None
+
+# --- FUNGSI UPDATE & DELETE DENGAN OTORISASI ---
+def update_reading_service(user, reading_id, data):
+    # Cari reading yang spesifik milik user ini
+    reading = BloodSugarReading.query.filter_by(id=reading_id, user_id=user.id).first()
+    
+    if not reading:
+        return False, "Data tidak ditemukan atau Anda tidak memiliki akses."
+
+    # Lakukan update
+    new_value = data.get('value')
+    if new_value is not None:
+        try:
+            reading.value = float(new_value)
+        except (ValueError, TypeError):
+            return False, "Nilai gula darah harus berupa angka."
+    reading.notes = data.get('notes', reading.notes)
+    
+    db.session.commit()
+    return True, "Data berhasil diupdate."
+
+def delete_reading_service(user, reading_id):
+    reading = BloodSugarReading.query.filter_by(id=reading_id, user_id=user.id).first()
+    
+    if not reading:
+        return False, "Data tidak ditemukan atau Anda tidak memiliki akses."
+        
+    db.session.delete(reading)
+    db.session.commit()
+    return True, "Data berhasil dihapus."
