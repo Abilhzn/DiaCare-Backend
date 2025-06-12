@@ -49,7 +49,7 @@ def create_app(config_name='default'):
     from .blood_sugar_monitoring.routes import blood_sugar_bp
     app.register_blueprint(blood_sugar_bp, url_prefix='/api/blood-sugar')
 
-    from .recomendations.routes import recommendations_bp
+    from .recommendations.routes import recommendations_bp
     app.register_blueprint(recommendations_bp, url_prefix='/api/recommendations')
 
     from .notifications.routes import notifications_bp

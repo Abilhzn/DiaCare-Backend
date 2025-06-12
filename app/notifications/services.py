@@ -1,4 +1,4 @@
-from app.recomendations.services import get_recommendation_service
+from app.recommendations.services import get_recommendation_service
 
 def generate_notification(age: int, glucose: int, condition: str, category: str) -> dict:
     """
