@@ -22,36 +22,48 @@ def is_valid_password(password):
     return True
 
 def register_user(username, email, password, full_name):
+    """
+    Mendaftarkan user baru, lengkap dengan profil awal.
+    Mengembalikan tuple: (success: bool, response: dict)
+    """
+
+    # Cek apakah username atau email sudah ada
     if User.query.filter((User.username == username) | (User.email == email)).first():
-        return False, {"status": "error", "message": "Username atau Email sudah ada yang menggunakan."}
-    
-    """Membuat user baru."""
-    if User.query.filter_by(username=username).first():
-        return None, "Username already exists", 409 # Conflict
-    if User.query.filter_by(email=email).first():
-        return None, "Email already exists", 409
-
-    if not is_valid_gmail(email):
-        return None, "Invalid email format. Must be a @gmail.com address.", 400 # Bad Request
-    
-    if not is_valid_password(password):
-        return None, "Password must be at least 8 characters long and include uppercase, lowercase, and a number.", 400
-
-    new_user = User(username=username, email=email)
-    new_user.set_password(password)
-    new_profile = Profile(full_name=full_name)
-    new_user.profile = new_profile
+        response = {"status": "error", "message": "Username atau Email sudah ada yang menggunakan."}
+        return False, response
     
     try:
+        # Buat objek User baru
+        new_user = User(
+            username=username,
+            email=email,
+            password=password # Password akan di-hash di dalam model User
+        )
+
+        # Buat objek Profile baru dan isi dengan nama lengkap
+        new_profile = Profile(full_name=full_name)
+
+        # Hubungkan profil dengan user
+        new_user.profile = new_profile
+        
+        # Simpan keduanya ke database
         db.session.add(new_user)
         db.session.commit()
 
+        # Buat token
         auth_token = encode_auth_token(new_user.id)
-        response = {"status": "success", "message": "Registrasi berhasil!", "auth_token": auth_token}
-        return True, response, 201 # Created
+
+        response = {
+            "status": "success",
+            "message": "Registrasi berhasil!",
+            "auth_token": auth_token
+        }
+        return True, response
+
     except Exception as e:
         db.session.rollback()
-        return False, {"status": "error", "message": f"Terjadi kesalahan internal: {str(e)}"}
+        response = {"status": "error", "message": f"Terjadi kesalahan internal saat menyimpan data: {str(e)}"}
+        return False, response
 
 def authenticate_user(username, password):
     """Mengautentikasi user."""
@@ -126,38 +138,27 @@ def get_user_profile(user_id):
 def login_user(email, password):
     """
     Melakukan login user dan mengecek status kelengkapan profil.
+    Mengembalikan tuple: (success: bool, response: dict)
     """
-    try:
-        user = User.query.filter_by(email=email).first()
-        if user and user.check_password(password):
-            # Login berhasil, sekarang cek profilnya
+    user = User.query.filter_by(email=email).first()
+    if user and user.check_password(password):
+        user_status = "existing_user"
+        if user.profile and not user.profile.is_complete:
+            user_status = "new_user_profile_incomplete"
             
-            user_status = "existing_user" # Asumsi default pengguna lama
-            
-            # Cek apakah profil sudah lengkap menggunakan property yang kita buat
-            if user.profile and not user.profile.is_complete:
-                user_status = "new_user_profile_incomplete"
-            
-            auth_token = encode_auth_token(user.id)
-            
-            response_data = {
-                'status': 'success',
-                'message': 'Login berhasil.',
-                'auth_token': auth_token,
-                'user_status': user_status, # <-- KIRIM STATUS INI KE FRONTEND
-                'user': {
-                    'id': user.id,
-                    'username': user.username,
-                    'email': user.email,
-                    # Kirim juga data profil jika ada
-                    'profile': user.profile.to_dict() if user.profile else None 
-                }
+        auth_token = encode_auth_token(user.id)
+        response_data = {
+            'status': 'success',
+            'message': 'Login berhasil.',
+            'auth_token': auth_token,
+            'user_status': user_status,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'profile': user.profile.to_dict() if user.profile else None 
             }
-            return True, response_data
-            
-        else:
-            return False, {"status": "error", "message": "Email atau password salah."}
-
-    except Exception as e:
-        # Sebaiknya log error di sini
-        return None
+        }
+        return True, response_data
+    else:
+        return False, {"status": "error", "message": "Email atau password salah."}
