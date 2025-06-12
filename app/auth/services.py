@@ -21,7 +21,7 @@ def is_valid_password(password):
         return False
     return True
 
-def create_user(username, email, password, full_name):
+def register_user(username, email, password, full_name):
     if User.query.filter((User.username == username) | (User.email == email)).first():
         return False, {"status": "error", "message": "Username atau Email sudah ada yang menggunakan."}
     
