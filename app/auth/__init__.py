@@ -1,5 +1,3 @@
-# app/auth/__init__.py (KODE YANG BENAR)
-
 from flask import Blueprint
 
 # Hanya definisikan Blueprint di sini
