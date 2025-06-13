@@ -1,8 +1,8 @@
 import re
-from datetime import datetime
-from app import db # Menggunakan 'db' dari app/__init__.py (pola factory)
-from app.auth.models import User, Profile
-from app.core.utils import encode_auth_token # Asumsi fungsi ini ada dan berfungsi
+from app import db
+from app.auth.models import User
+# Pastikan Anda memiliki fungsi ini di app/core/utils.py
+from app.core.utils import encode_auth_token 
 
 # --- Fungsi Helper untuk Validasi ---
 
@@ -32,7 +32,7 @@ def is_valid_password(password):
 
 # --- Service Functions ---
 
-def register_user(username, email, password, full_name):
+def register_user(username, email, password):
     """
     Mendaftarkan user baru dengan validasi ketat.
     Mengembalikan tuple: (data, message, status_code)
@@ -54,15 +54,11 @@ def register_user(username, email, password, full_name):
         new_user = User(username=username, email=email)
         new_user.set_password(password)
 
-        # Buat objek Profile baru dan isi dengan nama lengkap
-        new_profile = Profile(full_name=full_name)
-        new_user.profile = new_profile
-
         # Simpan ke database
         db.session.add(new_user)
         db.session.commit()
 
-        # Buat token
+        # Buat token agar user bisa langsung login
         auth_token = encode_auth_token(new_user.id)
 
         response_data = {
@@ -89,64 +85,9 @@ def login_user(email, password):
             'user': {
                 'id': user.id,
                 'username': user.username,
-                'email': user.email,
-                'profile': user.profile.to_dict() if user.profile else None
+                'email': user.email
             }
         }
         return response_data, 'Login berhasil.', 200
     else:
         return None, "Email atau password salah.", 401
-
-def get_user_profile(user_id):
-    """
-    Mengambil profil user.
-    Mengembalikan tuple: (data, message, status_code)
-    """
-    user = User.query.get(user_id)
-    if not user:
-        return None, "User tidak ditemukan", 404
-    if not user.profile:
-        return None, "Profil belum dibuat untuk user ini.", 404
-    
-    return user.profile.to_dict(), "Profil berhasil diambil", 200
-
-def create_or_update_profile(user_id, data, is_update=False):
-    """
-    Membuat atau memperbarui profil user.
-    Mengembalikan tuple: (data, message, status_code)
-    """
-    user = User.query.get(user_id)
-    if not user:
-        return None, "User tidak ditemukan", 404
-
-    profile = user.profile
-    if not profile:
-        if is_update:
-             return None, "Profil tidak ditemukan, tidak bisa update.", 404
-        profile = Profile(user_id=user_id)
-        user.profile = profile
-
-    # Update fields
-    if 'full_name' in data:
-        profile.full_name = data['full_name']
-    if 'date_of_birth' in data:
-        try:
-            profile.date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
-        except (ValueError, TypeError):
-            return None, "Format tanggal lahir salah. Gunakan YYYY-MM-DD.", 400
-    if 'height' in data:
-        profile.height = data['height']
-    if 'weight' in data:
-        profile.weight = data['weight']
-    if 'precondition' in data:
-        if data['precondition'] not in ['iya', 'tidak', 'prediabetic']:
-            return None, "Nilai precondition tidak valid. Pilih 'iya', 'tidak', atau 'prediabetic'.", 400
-        profile.precondition = data['precondition']
-
-    try:
-        db.session.commit()
-        message = "Profil berhasil diperbarui" if is_update else "Profil berhasil dibuat"
-        return profile.to_dict(), message, 200 if is_update else 201
-    except Exception as e:
-        db.session.rollback()
-        return None, f"Gagal menyimpan profil: {str(e)}", 500
