@@ -69,8 +69,8 @@ with st.form("prediction_form"):
                         else:
                             st.metric(label="Tingkat Risiko Diabetes", value=risk_level, delta="Bagus", delta_color="off")
                         
-                        # if recommendation:
-                        #     st.info(f"💡 Rekomendasi Personal Untuk Anda: {recommendation.get('message', ' ')}")
+                        if recommendation:
+                            st.info(f"💡 Rekomendasi Personal Untuk Anda: {recommendation.get('message', ' ')}")
 
                     else:
                         st.error(f"Gagal mendapatkan prediksi: {response.json().get('message', 'Error tidak diketahui')}")

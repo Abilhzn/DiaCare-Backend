@@ -1,8 +1,8 @@
 import re
-from app import db
-from app.auth.models import User
-# Pastikan Anda memiliki fungsi ini di app/core/utils.py
-from app.core.utils import encode_auth_token 
+from datetime import datetime
+from app.models.base import db # <-- INI SOLUSINYA
+from app.auth.models import User, Profile
+from app.core.utils import encode_auth_token # Asumsi fungsi ini ada dan berfungsi
 
 # --- Fungsi Helper untuk Validasi ---
 
@@ -32,7 +32,7 @@ def is_valid_password(password):
 
 # --- Service Functions ---
 
-def register_user(username, email, password):
+def register_user(username, email, password, full_name):
     """
     Mendaftarkan user baru dengan validasi ketat.
     Mengembalikan tuple: (data, message, status_code)
@@ -50,47 +50,119 @@ def register_user(username, email, password):
         return None, "Username atau Email sudah ada yang menggunakan.", 409
 
     try:
-        # Buat objek User baru
-        new_user = User(username=username, email=email)
-        new_user.set_password(password)
+        new_user = User(
+            username=username,
+            email=email,
+            password=password # <-- Argumen yang hilang sudah ditambahkan
+        )
+
+        # Buat objek Profile baru dan isi dengan nama lengkap
+        new_profile = Profile(full_name=full_name)
+        new_user.profile = new_profile
 
         # Simpan ke database
         db.session.add(new_user)
         db.session.commit()
 
-        # Buat token agar user bisa langsung login
+        # Buat token
         auth_token = encode_auth_token(new_user.id)
 
         response_data = {
-            "status": "success",
+            "message": "Registrasi berhasil!",
+            "user": { "id": new_user.id, "username": new_user.username },
             "auth_token": auth_token
         }
-        return response_data, "Registrasi berhasil!", 201
+        return True, response_data, 201
 
     except Exception as e:
         db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return None, f"Terjadi kesalahan internal: {str(e)}", 500
 
-def login_user(username, password):
+def login_user(email, password):
     """
-    Melakukan login user menggunakan username.
+    Memverifikasi kredensial dan mengembalikan data user lengkap beserta token.
+    """
+    try:
+        user = User.query.filter_by(email=email).first()
+
+        if user and user.verify_password(password):
+            auth_token = encode_auth_token(user.id)
+            
+            # Ini adalah dictionary yang seharusnya dikirim
+            response_data = {
+                "status": "success",
+                "message": "Login berhasil!",
+                "auth_token": auth_token,
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "full_name": user.profile.full_name if user.profile else user.username
+                }
+            }
+            # Mengembalikan 3 nilai: True, dictionary data, dan kode 200
+            return True, response_data, 200
+        else:
+            # Mengembalikan 3 nilai: False, dictionary error, dan kode 401
+            return False, {"message": "Email atau password salah."}, 401
+
+    except Exception as e:
+        print(f"!!! LOGIN ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, {"message": "Terjadi kesalahan pada server."}, 500
+
+def get_user_profile(user_id):
+    """
+    Mengambil profil user.
     Mengembalikan tuple: (data, message, status_code)
     """
-    # PERUBAHAN DI SINI: Mencari user berdasarkan 'username'
-    user = User.query.filter_by(username=username).first()
+    user = User.query.get(user_id)
+    if not user:
+        return None, "User tidak ditemukan", 404
+    if not user.profile:
+        return None, "Profil belum dibuat untuk user ini.", 404
     
-    if user and user.check_password(password):
-        auth_token = encode_auth_token(user.id)
-        response_data = {
-            'status': 'success',
-            'auth_token': auth_token,
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email
-            }
-        }
-        return response_data, 'Login berhasil.', 200
-    else:
-        # PERUBAHAN DI SINI: Pesan error disesuaikan
-        return None, "Username atau password salah.", 401
+    return user.profile.to_dict(), "Profil berhasil diambil", 200
+
+def create_or_update_profile(user_id, data, is_update=False):
+    """
+    Membuat atau memperbarui profil user.
+    Mengembalikan tuple: (data, message, status_code)
+    """
+    user = User.query.get(user_id)
+    if not user:
+        return None, "User tidak ditemukan", 404
+
+    profile = user.profile
+    if not profile:
+        if is_update:
+             return None, "Profil tidak ditemukan, tidak bisa update.", 404
+        profile = Profile(user_id=user_id)
+        user.profile = profile
+
+    # Update fields
+    if 'full_name' in data:
+        profile.full_name = data['full_name']
+    if 'date_of_birth' in data:
+        try:
+            profile.date_of_birth = datetime.strptime(data['date_of_birth'], '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            return None, "Format tanggal lahir salah. Gunakan YYYY-MM-DD.", 400
+    if 'height' in data:
+        profile.height = data['height']
+    if 'weight' in data:
+        profile.weight = data['weight']
+    if 'precondition' in data:
+        if data['precondition'] not in ['iya', 'tidak', 'prediabetic']:
+            return None, "Nilai precondition tidak valid. Pilih 'iya', 'tidak', atau 'prediabetic'.", 400
+        profile.precondition = data['precondition']
+
+    try:
+        db.session.commit()
+        message = "Profil berhasil diperbarui" if is_update else "Profil berhasil dibuat"
+        return profile.to_dict(), message, 200 if is_update else 201
+    except Exception as e:
+        db.session.rollback()
+        return None, f"Gagal menyimpan profil: {str(e)}", 500
