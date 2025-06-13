@@ -23,6 +23,7 @@ def register():
     response_data, message, status_code = services.register_user(username, email, password, full_name)
 
     if status_code >= 400: # Jika ada error dari service
+
         return jsonify({"status": "error", "message": message}), status_code
     
     # Jika sukses
@@ -30,9 +31,11 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
+    """Endpoint untuk login user menggunakan username."""
     data = request.get_json()
     if not data or not all(k in data for k in ['email', 'password']):
         return jsonify({"message": "Email dan password wajib diisi."}), 400
+
 
     # Panggil service dan siapkan 3 variabel untuk menampung hasilnya
     success, response_data, status_code = services.login_user(data['email'], data['password'])
