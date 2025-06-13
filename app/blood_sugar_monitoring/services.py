@@ -22,12 +22,13 @@ def add_blood_sugar_service(user, data):
     condition = data.get('condition')
 
     if value is None or not condition:
-        return False, "Nilai gula darah tidak boleh kosong."
+        return False, {"message": "Kadar gula (value) dan kondisi (condition) wajib diisi."}, 400
     
     try:
-        float_value = float(value)
+        value = float(value)
     except (ValueError, TypeError):
         return False, "Nilai gula darah harus berupa angka."
+    
     try:
         # Buat entri baru dan kaitkan dengan user.id
         new_reading = BloodSugarReading(
@@ -42,16 +43,16 @@ def add_blood_sugar_service(user, data):
 
         # --- PANGGIL FITUR LAIN SETELAH DATA DISIMPAN ---
         # 1. Panggil service Rekomendasi
-        recommendation_text = get_recommendation_service(
-            value=new_reading.value, # Menggunakan 'value'
-            meal_condition=new_reading.condition # Menggunakan 'meal_condition' sesuai definisi fungsi di bawah
-        )
         # recommendation_text = get_recommendation_service(
-        #     value=new_reading.value, 
-        #     user_age=user.profile.age, # Ambil data profil user
-        #     user_category=user.profile.precondition, # misal: 'sehat', 'pradiabetes'
-        #     meal_condition=new_reading.condition
+        #     value, # Menggunakan 'value'
+        #     meal_condition=new_reading.condition # Menggunakan 'meal_condition' sesuai definisi fungsi di bawah
         # )
+        recommendation_text = get_recommendation_service(
+            user.profile.age, # Ambil data profil user
+            value, 
+            condition,
+            user.profile.precondition # misal: 'sehat', 'pradiabetes'
+        )
         
         if recommendation_text:
             # Buat objek Notifikasi baru dari teks rekomendasi
@@ -63,16 +64,19 @@ def add_blood_sugar_service(user, data):
             db.session.commit()
 
         # 2. Panggil service Notifikasi
-        notification_message = generate_notification(user, new_reading.value)
+        notification_message = generate_notification(user.profile.age, # Ambil data profil user
+            value, 
+            condition,
+            user.profile.precondition)
 
         # 3. Siapkan response yang kaya akan informasi
         response_data = {
             "message": "Data gula darah berhasil disimpan.",
             "reading": new_reading.to_dict(), # Asumsi ada method to_dict() di model
             "recommendation": recommendation_text,
-            # "notification": notification_message
+            "notification": notification_message
         }
-        return True, response_data
+        return True, response_data, 200
     
     except Exception as e:
         db.session.rollback()
@@ -81,13 +85,19 @@ def add_blood_sugar_service(user, data):
 # --- FUNGSI READ DENGAN FILTER USER ---
 def get_all_readings_service(user):
     """
-    Mengambil semua riwayat pembacaan gula darah untuk seorang user.
+    Mengambil semua riwayat pembacaan gula darah untuk seorang user,
+    dan mengembalikan dalam format (data, error, status_code).
     """
     if not user:
-        return None
+        return None, "User tidak ditemukan.", 404
     
-    readings = BloodSugarReading.query.filter_by(user_id=user.id).order_by(BloodSugarReading.timestamp.desc()).all()
-    return [reading.to_dict() for reading in readings]
+    try:
+        readings = BloodSugarReading.query.filter_by(user_id=user.id).order_by(BloodSugarReading.timestamp.desc()).all()
+        # Jika berhasil, kembalikan 3 nilai: data, None untuk error, dan 200 untuk status
+        return [reading.to_dict() for reading in readings], None, 200
+    except Exception as e:
+        # Jika ada error database, kembalikan 3 nilai: None, pesan error, dan 500
+        return None, f"An unexpected error occurred: {str(e)}", 500
 
 def get_user_readings_service(user):
     # .query.filter_by(user_id=user.id) adalah kuncinya!

@@ -1,5 +1,3 @@
-# pages/1_Pantau_Gula_Darah.py
-
 import streamlit as st
 import requests
 import pandas as pd
@@ -120,7 +118,7 @@ with tab_riwayat:
         st.dataframe(display_df[['Waktu', 'Kadar Gula', 'Kondisi', 'Catatan']], use_container_width=True)
     else:
         st.info("Belum ada data riwayat. Silakan input data baru di tab sebelah.")
-        
+                
 # import streamlit as st
 # import requests
 # import pandas as pd

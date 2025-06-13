@@ -1,11 +1,19 @@
 import joblib
+import os
 from flask import current_app
 import numpy as np
 from app.models.base import db
 from app.models.diabetes_prediction_result import DiabetesPredictionResult
+from app.recommendations.services import get_recommendation_service
+from sklearn.pipeline import Pipeline
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+import pandas as pd
 
 def load_model():
-    model_path = current_app.config.get('MODEL_PATH', 'ml_model/diabetes_predict_dataset.pkl')
+    # model_path = current_app.config.get('MODEL_PATH', 'ml_model/diabtes_predict_model.pkl')
+    model_path = 'app/diabetes_prediction/ml_model/diabtes_predict_model.pkl'
     try:
         model = joblib.load(model_path)
         print(f"INFO: Model berhasil dimuat dari {model_path}")
@@ -17,120 +25,71 @@ def load_model():
         print(f"ERROR: Gagal memuat model: {e}.")
         raise
 
+def calculate_bmi(weight, height):
+    """Menghitung BMI dari berat (kg) dan tinggi (cm)."""
+    if height is None or weight is None or height == 0:
+        return 0
+    return weight / ((height / 100) ** 2)
 
-def predict_diabetes_service(user, data): # Sesuai SC006 [cite: 12]
-    model = load_model()
-    
-    # Validasi kelengkapan data (SC007) [cite: 12]
-    required_fields = ['age', 'weight', 'blood_glucose_level', 'blood_pressure', 'family_history']
-    for field in required_fields:
-        if field not in data or data[field] is None:
-            return None, f"Harap lengkapi semua data. Field '{field}' tidak boleh kosong."
-
-    numeric_fields = ['age', 'weight', 'blood_glucose_level', 'blood_pressure']
-    for field in numeric_fields:
-        try:
-            data[field] = float(data[field])
-        except (ValueError, TypeError):
-            return None, f"Field '{field}' harus berupa angka yang valid."
-
+def predict_diabetes_service(user, prediction_data):
+    """
+    Melakukan prediksi risiko diabetes dan memanggil service rekomendasi
+    dengan fitur-fitur yang sudah diupdate.
+    """
     try:
-        family_history_bool = True if str(data.get('family_history', 'false')).lower() == 'true' else False
+        # Muat model
+        model = load_model()
 
-        # Pastikan urutan fitur sesuai dengan model asli
+        # --- Ekstrak semua data yang dibutuhkan dari payload ---
+        gender = prediction_data.get('gender')
+        age = prediction_data.get('age')
+        hypertension_bool = prediction_data.get('hypertension')
+        weight = prediction_data.get('weight')
+        height = prediction_data.get('height')
+        glucose = prediction_data.get('blood_glucose_level')
+        hba1c = prediction_data.get('HbA1c_level')
+        
+        # Validasi input dasar
+        if not all([gender, age, hypertension_bool is not None, weight, height, hba1c, glucose]):
+            return None, None, "Data input tidak lengkap. Semua field wajib diisi.", 400
+
+        hypertension = 1 if hypertension_bool else 0
+        
+        bmi = calculate_bmi(weight, height)
+
         features = np.array([[
-            data['age'],
-            data['weight'],
-            data['blood_glucose_level'],
-            data['blood_pressure'],
-            1 if family_history_bool else 0
+            gender, 
+            age, 
+            hypertension, 
+            bmi, 
+            glucose,
+            hba1c
         ]])
 
-        prediction_raw = model.predict(features)
-        prediction_label = prediction_raw[0]
+        # Buat DataFrame dari features untuk preprocessing
+        feature_names = ['gender', 'age', 'hypertension', 'bmi', 'HbA1c_level', 'blood_glucose_level']
+        df_features = pd.DataFrame(features, columns=feature_names)
+        
+        # Lakukan prediksi
+        prediction_result = model.predict(df_features)
+        
+        # Mapping hasil prediksi ke teks
+        risk_map = {0: "Tidak beresiko terkena Diabetes", 1: "Beresiko terkena Diabetes"}
+        risk_level = risk_map.get(prediction_result[0], "Tidak Diketahui")
 
-        prediction_entry = DiabetesPredictionResult(
-            user_id=user.id,
-            age=data['age'],
-            weight=data['weight'],
-            blood_glucose_level=data['blood_glucose_level'],
-            blood_pressure=data['blood_pressure'],
-            family_history=family_history_bool,
-            prediction_result=prediction_label
+        # Panggil service rekomendasi yang sudah ada
+        cat = "sehat"
+        if prediction_result == 1 : cat = "diabetes"
+        recommendation_text = get_recommendation_service(
+            age,
+            glucose,
+            'sebelum',
+            cat
         )
-        db.session.add(prediction_entry)
-        db.session.commit()
 
-        return {"risk_level": prediction_label, "details": "Prediksi berhasil."}, None
-    except Exception as e:
-        current_app.logger.error(f"Error saat prediksi: {e}")
-        return None, "Terjadi kesalahan saat melakukan prediksi."
+        return risk_level, recommendation_text, None, 200
 
-import joblib
-from flask import current_app
-import numpy as np
-from app.models.base import db
-from app.models.diabetes_prediction_result import DiabetesPredictionResult
-
-def load_model():
-    model_path = current_app.config.get('MODEL_PATH', 'ml_model/diabtes_predict_model.pkl')
-    try:
-        model = joblib.load(model_path)
-        print(f"INFO: Model berhasil dimuat dari {model_path}")
-        return model
     except FileNotFoundError:
-        print(f"ERROR: File model tidak ditemukan di {model_path}.")
-        raise
+        return None, None, "File model prediksi tidak ditemukan.", 500
     except Exception as e:
-        print(f"ERROR: Gagal memuat model: {e}.")
-        raise
-
-
-def predict_diabetes_service(user, data): # Sesuai SC006 [cite: 12]
-    model = load_model()
-    
-    # Validasi kelengkapan data (SC007) [cite: 12]
-    required_fields = ['age', 'weight', 'blood_glucose_level', 'blood_pressure', 'family_history']
-    for field in required_fields:
-        if field not in data or data[field] is None:
-            return None, f"Harap lengkapi semua data. Field '{field}' tidak boleh kosong."
-
-    numeric_fields = ['age', 'weight', 'blood_glucose_level', 'blood_pressure']
-    for field in numeric_fields:
-        try:
-            data[field] = float(data[field])
-        except (ValueError, TypeError):
-            return None, f"Field '{field}' harus berupa angka yang valid."
-
-    try:
-        family_history_bool = True if str(data.get('family_history', 'false')).lower() == 'true' else False
-
-        # Pastikan urutan fitur sesuai dengan model asli
-        features = np.array([[
-            data['age'],
-            data['weight'],
-            data['blood_glucose_level'],
-            data['blood_pressure'],
-            1 if family_history_bool else 0
-        ]])
-
-        prediction_raw = model.predict(features)
-        prediction_label = prediction_raw[0]
-
-        prediction_entry = DiabetesPredictionResult(
-            user_id=user.id,
-            age=data['age'],
-            weight=data['weight'],
-            blood_glucose_level=data['blood_glucose_level'],
-            blood_pressure=data['blood_pressure'],
-            family_history=family_history_bool,
-            prediction_result=prediction_label
-        )
-        db.session.add(prediction_entry)
-        db.session.commit()
-
-        return {"risk_level": prediction_label, "details": "Prediksi berhasil."}, None
-    except Exception as e:
-        current_app.logger.error(f"Error saat prediksi: {e}")
-        return None, "Terjadi kesalahan saat melakukan prediksi."
-
+        return None, None, f"Terjadi kesalahan saat prediksi: {str(e)}", 500
