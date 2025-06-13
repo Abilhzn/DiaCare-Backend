@@ -14,14 +14,11 @@ def register():
     email = data.get('email')
     password = data.get('password')
 
-    # Validasi input dasar
     if not all([username, email, password]):
         return jsonify({"message": "Username, email, dan password wajib diisi."}), 400
 
-    # Panggil service registrasi
     response_data, message, status_code = services.register_user(username, email, password)
 
-    # Kirim respons berdasarkan hasil dari service
     if status_code >= 400:
         return jsonify({"status": "error", "message": message}), status_code
     
@@ -29,22 +26,22 @@ def register():
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    """Endpoint untuk login user."""
+    """Endpoint untuk login user menggunakan username."""
     data = request.get_json()
     if not data:
         return jsonify({"message": "Request body harus dalam format JSON."}), 400
 
-    email = data.get('email')
+    # PERUBAHAN DI SINI: Mengambil 'username' dari request
+    username = data.get('username')
     password = data.get('password')
 
-    # Validasi input dasar
-    if not all([email, password]):
-        return jsonify({"message": "Email dan password wajib diisi."}), 400
+    # PERUBAHAN DI SINI: Validasi input 'username'
+    if not all([username, password]):
+        return jsonify({"message": "Username dan password wajib diisi."}), 400
     
-    # Panggil service login
-    response_data, message, status_code = services.login_user(email, password)
+    # PERUBAHAN DI SINI: Memanggil service dengan 'username'
+    response_data, message, status_code = services.login_user(username, password)
 
-    # Kirim respons berdasarkan hasil dari service
     if status_code >= 400:
         return jsonify({"status": "error", "message": message}), status_code
 

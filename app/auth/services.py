@@ -71,12 +71,14 @@ def register_user(username, email, password):
         db.session.rollback()
         return None, f"Terjadi kesalahan internal: {str(e)}", 500
 
-def login_user(email, password):
+def login_user(username, password):
     """
-    Melakukan login user.
+    Melakukan login user menggunakan username.
     Mengembalikan tuple: (data, message, status_code)
     """
-    user = User.query.filter_by(email=email).first()
+    # PERUBAHAN DI SINI: Mencari user berdasarkan 'username'
+    user = User.query.filter_by(username=username).first()
+    
     if user and user.check_password(password):
         auth_token = encode_auth_token(user.id)
         response_data = {
@@ -90,4 +92,5 @@ def login_user(email, password):
         }
         return response_data, 'Login berhasil.', 200
     else:
-        return None, "Email atau password salah.", 401
+        # PERUBAHAN DI SINI: Pesan error disesuaikan
+        return None, "Username atau password salah.", 401
