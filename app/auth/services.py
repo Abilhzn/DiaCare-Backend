@@ -1,6 +1,6 @@
 import re
 from datetime import datetime
-from app import db # Menggunakan 'db' dari app/__init__.py (pola factory)
+from app.models.base import db # <-- INI SOLUSINYA
 from app.auth.models import User, Profile
 from app.core.utils import encode_auth_token # Asumsi fungsi ini ada dan berfungsi
 
