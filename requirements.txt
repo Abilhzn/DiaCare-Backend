@@ -21,6 +21,8 @@ scikit-learn
 joblib
 pandas
 numpy
+XGBoost
+catboost
 
 # Frontend & Komunikasi API
 streamlit
