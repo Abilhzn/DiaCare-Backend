@@ -25,3 +25,4 @@ numpy
 # Frontend & Komunikasi API
 streamlit
 requests
+altair

@@ -1,6 +1,7 @@
 from app.models.base import db
 from app.models.blood_sugar_reading import BloodSugarReading
 from datetime import datetime
+from app.models.notification import Notification
 
 # --- INI BAGIAN KUNCI INTEGRASI ---
 from app.recommendations.services import get_recommendation_service
@@ -8,53 +9,86 @@ from app.notifications.services import generate_notification
 
 # --- FUNGSI CREATE YANG SUDAH TERINTEGRASI ---
 def add_blood_sugar_service(user, data):
+    """
+    Menambahkan data pembacaan gula darah baru, mendapatkan rekomendasi,
+    dan menyimpan rekomendasi tersebut sebagai notifikasi.
+    """
+
+    if not user:
+        return False, {"message": "User tidak ditemukan."}, 404
+
     value = data.get('value')
     notes = data.get('notes')
-    # Tambahan: Ambil kondisi makan dari input
-    condition = data.get('condition') # misal: 'sebelum_makan' atau 'setelah_makan'
+    condition = data.get('condition')
 
-    if value is None:
+    if value is None or not condition:
         return False, "Nilai gula darah tidak boleh kosong."
     
     try:
         float_value = float(value)
     except (ValueError, TypeError):
         return False, "Nilai gula darah harus berupa angka."
+    try:
+        # Buat entri baru dan kaitkan dengan user.id
+        new_reading = BloodSugarReading(
+            user_id=user.id,
+            value=float(value),
+            condition=condition,
+            notes=notes,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(new_reading)
+        db.session.commit()
 
-    # Buat entri baru dan kaitkan dengan user.id
-    new_reading = BloodSugarReading(
-        value=float_value,
-        notes=notes,
-        user_id=user.id,
-        timestamp=datetime.utcnow(),
-        condition=condition
-    )
-    db.session.add(new_reading)
-    db.session.commit()
+        # --- PANGGIL FITUR LAIN SETELAH DATA DISIMPAN ---
+        # 1. Panggil service Rekomendasi
+        recommendation_text = get_recommendation_service(
+            value=new_reading.value, # Menggunakan 'value'
+            meal_condition=new_reading.condition # Menggunakan 'meal_condition' sesuai definisi fungsi di bawah
+        )
+        # recommendation_text = get_recommendation_service(
+        #     value=new_reading.value, 
+        #     user_age=user.profile.age, # Ambil data profil user
+        #     user_category=user.profile.precondition, # misal: 'sehat', 'pradiabetes'
+        #     meal_condition=new_reading.condition
+        # )
+        
+        if recommendation_text:
+            # Buat objek Notifikasi baru dari teks rekomendasi
+            new_notification = Notification(
+                user_id=user.id,
+                message=f"Rekomendasi: {recommendation_text}"
+            )
+            db.session.add(new_notification)
+            db.session.commit()
 
-    # --- PANGGIL FITUR LAIN SETELAH DATA DISIMPAN ---
-    # 1. Panggil service Rekomendasi
-    recommendation_text = get_recommendation_service(
-        sugar_level_value=new_reading.value, 
-        user_age=user.profile.age, # Ambil data profil user
-        user_category=user.profile.precondition, # misal: 'sehat', 'pradiabetes'
-        meal_condition=new_reading.condition
-    )
+        # 2. Panggil service Notifikasi
+        notification_message = generate_notification(user, new_reading.value)
+
+        # 3. Siapkan response yang kaya akan informasi
+        response_data = {
+            "message": "Data gula darah berhasil disimpan.",
+            "reading": new_reading.to_dict(), # Asumsi ada method to_dict() di model
+            "recommendation": recommendation_text,
+            # "notification": notification_message
+        }
+        return True, response_data
     
-    # 2. Panggil service Notifikasi
-    notification_message = generate_notification(user, new_reading.value)
-
-    # 3. Siapkan response yang kaya akan informasi
-    response_data = {
-        "message": "Data gula darah berhasil disimpan.",
-        "reading": new_reading.to_dict(), # Asumsi ada method to_dict() di model
-        "recommendation": recommendation_text,
-        "notification": notification_message
-    }
-    
-    return True, response_data
+    except Exception as e:
+        db.session.rollback()
+        return False, {"message": f"An unexpected error occurred: {str(e)}"}, 500
 
 # --- FUNGSI READ DENGAN FILTER USER ---
+def get_all_readings_service(user):
+    """
+    Mengambil semua riwayat pembacaan gula darah untuk seorang user.
+    """
+    if not user:
+        return None
+    
+    readings = BloodSugarReading.query.filter_by(user_id=user.id).order_by(BloodSugarReading.timestamp.desc()).all()
+    return [reading.to_dict() for reading in readings]
+
 def get_user_readings_service(user):
     # .query.filter_by(user_id=user.id) adalah kuncinya!
     readings = BloodSugarReading.query.filter_by(user_id=user.id).order_by(BloodSugarReading.timestamp.desc()).all()
