@@ -4,7 +4,7 @@ import streamlit as st
 import requests
 from config import BACKEND_URL # <-- Menggunakan dari config
 
-# --- KONFIGURASI HALAMAN ---
+# --- KONFIGURASI HALAMAN ---z
 st.set_page_config(
     page_title="DiaCare Home",
     page_icon="🏠",

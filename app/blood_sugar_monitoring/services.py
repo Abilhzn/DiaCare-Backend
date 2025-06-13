@@ -22,12 +22,13 @@ def add_blood_sugar_service(user, data):
     condition = data.get('condition')
 
     if value is None or not condition:
-        return False, "Nilai gula darah tidak boleh kosong."
+        return False, {"message": "Kadar gula (value) dan kondisi (condition) wajib diisi."}, 400
     
     try:
-        float_value = float(value)
+        value = float(value)
     except (ValueError, TypeError):
         return False, "Nilai gula darah harus berupa angka."
+    
     try:
         # Buat entri baru dan kaitkan dengan user.id
         new_reading = BloodSugarReading(
@@ -43,7 +44,7 @@ def add_blood_sugar_service(user, data):
         # --- PANGGIL FITUR LAIN SETELAH DATA DISIMPAN ---
         # 1. Panggil service Rekomendasi
         recommendation_text = get_recommendation_service(
-            value=new_reading.value, # Menggunakan 'value'
+            value, # Menggunakan 'value'
             meal_condition=new_reading.condition # Menggunakan 'meal_condition' sesuai definisi fungsi di bawah
         )
         # recommendation_text = get_recommendation_service(
