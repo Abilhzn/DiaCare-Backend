@@ -1,20 +1,38 @@
+from dotenv import load_dotenv
+import os
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_bcrypt import Bcrypt
 from flask_cors import CORS
 from .core.config import config
-from .models.diabetes_prediction_result import db # Mengimpor db dari models.base
+from .models.base import db
+from .models import *
+from flask_migrate import Migrate
 
-bcrypt = Bcrypt()
+dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+if os.path.exists(dotenv_path):
+    print(f"--- [INIT] File .env ditemukan di '{dotenv_path}', memuat variabel...")
+    load_dotenv(dotenv_path)
+else:
+    print(f"--- [INIT] WARNING: File .env tidak ditemukan.")
 
-def create_app(config_name='default'):
-    app = Flask(__name__)
+migrate = Migrate()
+
+def create_app(config_name='development'):
+    app = Flask(__name__, instance_relative_config=True)
     app.config.from_object(config[config_name])
-    config[config_name].init_app(app)
+    # config[config_name].init_app(app)
+
+    db_url = os.getenv('DATABASE_URL')
+    print(f"--- [CREATE_APP] Nilai DATABASE_URL dari os.getenv: {db_url}")
+    if db_url:
+        # Suntikkan nilainya secara paksa ke konfigurasi aplikasi
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    else:
+        print("--- [CREATE_APP] WARNING: DATABASE_URL tidak ada di environment, DB mungkin gagal terhubung.")
+
+    CORS(app, supports_credentials=True, allow_headers=["Content-Type", "Authorization"])
 
     db.init_app(app)
-    bcrypt.init_app(app)
-    CORS(app) # Untuk mengizinkan request dari Streamlit (beda port)
+    migrate.init_app(app, db)
 
     # Error Handling Umum
     @app.errorhandler(400)
